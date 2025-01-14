@@ -1,7 +1,7 @@
 import h5py
 
 
-def nc_reader_downloaded(ncfile_path, data_type):
+def nc_reader(ncfile_path, data_type):
     try:
         with h5py.File(ncfile_path, 'r') as file:
             image_data = file['image_pixel_values'][:]
