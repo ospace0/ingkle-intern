@@ -1,0 +1,6 @@
+weather_path = "sample data/weather/"
+generator_path = "sample data/generator/"
+satellite_path = "sample data/satellite/"
+kriging_path = "sample data/kriging/"
+estimation_path = "sample data/estimation/"
+estimate_result_path = "sample data/estimation/results/"
