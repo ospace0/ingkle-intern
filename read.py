@@ -25,3 +25,4 @@ print(f"Data saved to {output_csv_path}")
 
 # Dataset 닫기
 dataset.close()
+b=3
