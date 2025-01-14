@@ -8,7 +8,9 @@ import shutil
 from datetime import datetime, timedelta
 from tqdm import tqdm
 from glob import glob
-from io import BytesIO 
+from io import BytesIO
+from nc_read_url import nc_reader
+
 
 # 이미지 데이터를 Parquet로 저장하는 함수
 def process_and_save_parquet(data_list, data_types, parquet_save_path, size_ranges):
@@ -119,7 +121,7 @@ def merge_parquet_files(input_directory, output_directory):
 def main():
     start_time = time.time()  # 시작 시간 기록
 
-    auth_key = "--kf5v_egQ6-H-b_3oAOv7A"
+    auth_key = "6vdMscAHSSC3TLHABykgvw"
     data_types = ["VI004", "VI005", "VI006", "VI008", "NR013", "NR016", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", "IR105", "IR112", "IR123", "IR133"]
     region = "KO"
     start_date = datetime(2025, 1, 10)  # 검색 시작일
@@ -158,17 +160,8 @@ def main():
                 for data_type in data_types:  # (4) 한 주기 루프, 파장 타입 루프 16개
                     url = f"https://apihub.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{region}/data?date={searching_time.strftime('%Y%m%d%H%M')}&authKey={auth_key}"
 
-                    try:
-                        response = requests.get(url, timeout=10)
-                        response.raise_for_status()
-
-                        with h5py.File(BytesIO(response.content), 'r') as file:
-                            image_data = file['image_pixel_values'][:]
-                            file_data_per_type.append(image_data)
-
-                    except Exception as e:
-                        print(f"{data_type} 다운로드 오류: {e}")
-                        file_data_per_type.append(None)
+                    data = nc_reader(url, data_type)
+                    file_data_per_type.append(data)  
 
                     data_type_progress.update(1)
                 data_type_progress.close()
