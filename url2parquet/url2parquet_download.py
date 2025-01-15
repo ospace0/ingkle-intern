@@ -9,8 +9,9 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 from glob import glob
 from io import BytesIO
-from url2parquet.nc_read_downloaded import nc_reader
-
+from nc_read_downloaded import nc_reader
+from changable_things import data_types, start_date, end_date, parquet_directory, nc_file_path, merged_directory, size_ranges, download_period, total_steps
+import stat
 
 # 이미지 데이터를 Parquet로 저장하는 함수
 def process_and_save_parquet(data_list, data_types, parquet_save_path, size_ranges):
@@ -121,21 +122,6 @@ def merge_parquet_files(input_directory, output_directory):
 def main():
     start_time = time.time()  # 시작 시간 기록
 
-    data_types = ["VI004", "VI005", "VI006", "VI008", "NR013", "NR016", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", "IR105", "IR112", "IR123", "IR133"]
-    start_date = datetime(2025, 1, 10)  # 검색 시작일
-    end_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    parquet_directory = "D:/sat_file/temp_parquet_hourly"  # 임시 시간별 parquet파일 저장 경로
-    nc_file_path = "D:/sat_file/temp"  # nc file path
-    merged_directory = "D:/sat_file/daily_parquets"  # 일별 parquet files
-    os.makedirs(parquet_directory, exist_ok=True)
-
-    # 필요한 크기와 범위 정의
-    size_ranges = {
-        (3600, 3600): [(1545, 2883), (1430, 2655)], 
-        (1800, 1800): [(772, 1441), (715, 1327)],  
-        (900, 900): [(410, 720), (357, 663)],  
-    }
-
     # 전체 날짜 진행도를 위한 tqdm
     date_progress = tqdm(total=(end_date - start_date).days, desc="전체 진행도 (Dates)")
 
@@ -146,8 +132,7 @@ def main():
         # 하루의 각 시간 처리
         searching_hours = [searching_date + timedelta(hours=hour) for hour in range(24)]
         for searching_hour in searching_hours:  # (2) 하루 루프, 24시간
-            download_period = 10  # 다운로드 주기
-            total_steps = 60 // download_period  # 다운로드 주기에 따른 단계 수
+
             time_progress = tqdm(total=total_steps, desc=f"{searching_hour.strftime('%H:%M')} 진행도", leave=False)
 
             searching_time = searching_hour
