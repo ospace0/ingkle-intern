@@ -15,13 +15,23 @@ from nc_read_downloaded import nc_reader
 from changable_things import data_types, start_date, end_date, parquet_directory, nc_file_path, merged_directory, size_ranges, download_period, total_steps
 from f_merge_parquet_files import merge_parquet_files
 from f_process_and_save_parquet import process_and_save_parquet
-from nc_read_downloaded import process_data_types
+from nc_read_url import process_data_types
 
 
 # 메인 실행 함수
 def main():
     start_time = time.time()  # 시작 시간 기록
-
+   
+    # Mode selection
+    mode = input("Select mode: 1(get from url) or 2(read downloaded nc)\n")
+    if mode == '1':
+        get_nc = "url"
+    elif mode == '2':
+        get_nc = nc_file_path
+    else:
+        print("Invalid mode selected.")
+        return
+    
     # 전체 날짜 진행도를 위한 tqdm
     date_progress = tqdm(total=(end_date - start_date).days, desc="전체 진행도 (Dates)")
 
@@ -34,12 +44,11 @@ def main():
         for searching_hour in searching_hours:  # (2) 하루 루프, 24시간
 
             time_progress = tqdm(total=total_steps, desc=f"{searching_hour.strftime('%H:%M')} 진행도", leave=False)
-
             searching_time = searching_hour
             hourly_data_list = []
             while searching_time < searching_hour + timedelta(hours=1):  # (3) 한 시간 루프, 주기 6개
                 
-                file_data_per_type = process_data_types(nc_file_path, data_types, searching_time)
+                file_data_per_type = process_data_types(get_nc, data_types, searching_time)
 
                 hourly_data_list.append(file_data_per_type)
                 searching_time += timedelta(minutes=download_period)
