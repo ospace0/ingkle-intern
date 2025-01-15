@@ -1,23 +1,15 @@
-import requests
-import h5py
 import os
 import time
-import numpy as np
-import pandas as pd
 import shutil
-import stat
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from tqdm import tqdm
-from glob import glob
-from io import BytesIO
 from changable_things import data_types, start_date, end_date, parquet_directory, nc_file_path, merged_directory, size_ranges, download_period, total_steps
 from f_merge_parquet_files import merge_parquet_files
 from f_process_and_save_parquet import process_and_save_parquet
 from url2parquet.f_nc_read import process_data_types
 
-
-#main function
+#main function(run this function not f_process_and_save_parquet.py, f_merge_parquet_files.py or f_nc_read.py)
 def main():
     start_time = time.time()  # start time check
    

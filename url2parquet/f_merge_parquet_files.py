@@ -1,16 +1,6 @@
-import requests
-import h5py
 import os
-import time
-import numpy as np
 import pandas as pd
-import shutil
-from datetime import datetime, timedelta
-from tqdm import tqdm
 from glob import glob
-from io import BytesIO
-from changable_things import data_types, start_date, end_date, parquet_directory, nc_file_path, merged_directory, size_ranges, download_period, total_steps
-import stat
 
 # function to process and save parquet
 def merge_parquet_files(input_directory, output_directory):
