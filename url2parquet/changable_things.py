@@ -16,3 +16,7 @@ size_ranges = {
 
 download_period = 60  # 다운로드 주기
 total_steps = 60 // download_period  # 다운로드 주기에 따른 단계 수
+
+#things that you need when you download the data from the url
+auth_key = "6vdMscAHSSC3TLHABykgvw"
+region = "KO"
