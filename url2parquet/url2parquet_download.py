@@ -15,6 +15,10 @@ import stat
 
 # 이미지 데이터를 Parquet로 저장하는 함수
 def process_and_save_parquet(data_list, data_types, parquet_save_path, size_ranges):
+    if parquet_directory:
+        if not os.path.exists(parquet_directory):
+            os.makedirs(parquet_directory)
+            
     if not data_list:
         print("수집된 데이터가 없습니다.")
         return
@@ -143,7 +147,7 @@ def main():
                 file_data_per_type = []
                 for data_type in data_types:  # (4) 한 주기 루프, 파장 타입 루프 16개
 
-                    data = nc_reader(nc_file_path, data_type)
+                    data = nc_reader(nc_file_path, data_type,searching_time)
                     file_data_per_type.append(data)  
 
                     data_type_progress.update(1)
