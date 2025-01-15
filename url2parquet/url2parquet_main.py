@@ -11,16 +11,15 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 from glob import glob
 from io import BytesIO
-from nc_read_downloaded import nc_reader
 from changable_things import data_types, start_date, end_date, parquet_directory, nc_file_path, merged_directory, size_ranges, download_period, total_steps
 from f_merge_parquet_files import merge_parquet_files
 from f_process_and_save_parquet import process_and_save_parquet
-from nc_read_url import process_data_types
+from url2parquet.f_nc_read import process_data_types
 
 
-# 메인 실행 함수
+#main function
 def main():
-    start_time = time.time()  # 시작 시간 기록
+    start_time = time.time()  # start time check
    
     # Mode selection
     mode = input("Select mode: 1(get from url) or 2(read downloaded nc)\n")
@@ -32,23 +31,23 @@ def main():
         print("Invalid mode selected.")
         return
     
-    # 전체 날짜 진행도를 위한 tqdm
+    # tqdm progress bar for all dates
     date_progress = tqdm(total=(end_date - start_date).days, desc="전체 진행도 (Dates)")
 
     searching_date = start_date
-    while searching_date < end_date:  # (1) 데이터 수집 전체 days 루프
+    while searching_date < end_date:  # (1) all dates loop
         hour_progress = tqdm(total=24, desc=f"{searching_date.strftime('%Y-%m-%d')} 진행도 (Hours)", leave=False)
 
-        # 하루의 각 시간 처리
+        # make one day into 24 hours
         searching_hours = [searching_date + timedelta(hours=hour) for hour in range(24)]
-        for searching_hour in searching_hours:  # (2) 하루 루프, 24시간
+        for searching_hour in searching_hours:  # (2) one day, all 24 hours loop
 
             time_progress = tqdm(total=total_steps, desc=f"{searching_hour.strftime('%H:%M')} 진행도", leave=False)
             searching_time = searching_hour
             hourly_data_list = []
-            while searching_time < searching_hour + timedelta(hours=1):  # (3) 한 시간 루프, 주기 6개
+            while searching_time < searching_hour + timedelta(hours=1):  # (3) 1 hour loop
                 
-                file_data_per_type = process_data_types(get_nc, data_types, searching_time)
+                file_data_per_type = process_data_types(get_nc, data_types, searching_time) # (4) data types loop, for 16 data types(wavelengths)
 
                 hourly_data_list.append(file_data_per_type)
                 searching_time += timedelta(minutes=download_period)
@@ -59,7 +58,7 @@ def main():
 
             hour_progress.update(1)
 
-            # Parquet 파일 저장
+            # save parquet files
             timestamp = searching_hour.strftime('%Y%m%d_%H')
             parquet_base_path = f"{parquet_directory}/satellite_data_1havg_{timestamp}"
             process_and_save_parquet(hourly_data_list, data_types, parquet_base_path, size_ranges)
@@ -71,7 +70,7 @@ def main():
 
         merge_parquet_files(parquet_directory, merged_directory)
 
-        # Parquet 디렉토리 내 파일 삭제
+        # hourly paquet files delete
         for filename in os.listdir(parquet_directory):
             file_path = os.path.join(parquet_directory, filename)
             try:
