@@ -36,10 +36,10 @@ def merge_parquet_files(input_directory, output_directory):
         for time, file_path in files:
             df = pd.read_parquet(file_path)  # read parquet file
 
-            # add time column (yyyymmddhh)
-            hour = time.zfill(2)  # 시간 형식을 두 자리로 맞춤
-            datetime_str = group_key.split("_")[0] + hour
+            # add time columns
+            datetime_str = group_key.split("_")[0] 
             df.insert(0, "Datetime", datetime_str)
+            df.insert(1, "Hour", time)
 
             merged_data.append(df)
 
