@@ -51,7 +51,7 @@ def main():
             hour_progress.update(1)
 
             # save parquet files
-            timestamp = searching_hour.strftime('%Y%m%d_%H')
+            timestamp = f"{searching_hour.year}{searching_hour.month:02}{searching_hour.day:02}_{searching_hour.hour}"
             parquet_base_path = f"{parquet_directory}/satellite_data_1havg_{timestamp}"
             process_and_save_parquet(hourly_data_list, data_types, parquet_base_path, size_ranges)
 
