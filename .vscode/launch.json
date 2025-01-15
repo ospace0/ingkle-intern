@@ -20,6 +20,16 @@
             "justMyCode": true,
             "cwd": "${workspaceRoot}",
             "env": {"PYTHONPATH": "${workspaceRoot}"},
+        },
+        {
+            "name": "krig_sample",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceRoot}/khnp_intern/",
+            "env": {"PYTHONPATH": "${workspaceRoot}/khnp_intern/"},
         }
     ]
 }
