@@ -15,6 +15,7 @@ from nc_read_downloaded import nc_reader
 from changable_things import data_types, start_date, end_date, parquet_directory, nc_file_path, merged_directory, size_ranges, download_period, total_steps
 from f_merge_parquet_files import merge_parquet_files
 from f_process_and_save_parquet import process_and_save_parquet
+from nc_read_downloaded import process_data_types
 
 
 # 메인 실행 함수
@@ -37,16 +38,8 @@ def main():
             searching_time = searching_hour
             hourly_data_list = []
             while searching_time < searching_hour + timedelta(hours=1):  # (3) 한 시간 루프, 주기 6개
-                data_type_progress = tqdm(total=len(data_types), desc="데이터 타입 진행도", leave=False)
-
-                file_data_per_type = []
-                for data_type in data_types:  # (4) 한 주기 루프, 파장 타입 루프 16개
-
-                    data = nc_reader(nc_file_path, data_type,searching_time)
-                    file_data_per_type.append(data)  
-
-                    data_type_progress.update(1)
-                data_type_progress.close()
+                
+                file_data_per_type = process_data_types(nc_file_path, data_types, searching_time)
 
                 hourly_data_list.append(file_data_per_type)
                 searching_time += timedelta(minutes=download_period)
