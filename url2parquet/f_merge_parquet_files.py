@@ -21,8 +21,18 @@ def merge_parquet_files(input_directory, output_directory):
         time = parts[4]
         size = parts[5].replace(".parquet", "")
 
+        # Define size mapping
+        size_mapping = {
+            "311x307": "20",
+            "670x613": "10",
+            "1339x1226": "05"
+        }
+
+        # Get size label from mapping, default to original size if not found
+        size_label = size_mapping.get(size, size) 
+
         # group key: date_size
-        group_key = f"{date}_{size}"
+        group_key = f"{date}_{size_label}"
 
         if group_key not in grouped_files:
             grouped_files[group_key] = []
