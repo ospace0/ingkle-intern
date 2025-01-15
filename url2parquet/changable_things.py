@@ -14,5 +14,5 @@ size_ranges = {
         (900, 900): [(410, 720), (357, 663)],  
     }
 
-download_period = 10  # 다운로드 주기
+download_period = 60  # 다운로드 주기
 total_steps = 60 // download_period  # 다운로드 주기에 따른 단계 수
