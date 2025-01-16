@@ -1,5 +1,6 @@
-import requests, os, time, h5py
+import requests, h5py
 from datetime import datetime, timedelta
+from pyproj import Proj, Transformer
 from io import BytesIO
 import numpy as np
 import pandas as pd
@@ -44,7 +45,8 @@ class SatelliteData:
             (1800, 1800): [(772, 1441), (715, 1327)],  
             (900, 900): [(410, 720), (357, 663)],  
         }
-        self.auth_key = "-kf5v_egQ6-H-b_3oAOv7A"
+        # self.auth_key = "-kf5v_egQ6-H-b_3oAOv7A"
+        self.auth_key = "6vdMscAHSSC3TLHABykgvw"
         self.region = "KO"
         self.download_timedelta = timedelta(minutes=30)
 
@@ -57,15 +59,25 @@ class SatelliteData:
         save_time_str = save_time.strftime('%Y%m%d%H%M')
         type_dataset = {}
         for data_type in self.data_types:
-            url = f"https://apihub-org.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
+            # url = f"https://apihub-org.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
+            url = f"https://apihub.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
             data = _nc_reader_url(url, data_type)
             data = self._extract_data(data)
             type_dataset[data_type] = data
         return type_dataset
+    
+    def _convert_coord(self, size: str, dataset: pd.DataFrame):
+        coord_file = f"url2parquet/precomputed_coordinates_res_{size}.parquet"
+        coord_df = pd.read_parquet(coord_file)
+        coord_df[['y', 'x']] = coord_df[['x', 'y']] - coord_df[['x', 'y']].min(axis=0)
+        if np.abs(dataset[['x', 'y']] - coord_df[['x', 'y']]).sum().max() > 0:
+            raise Exception("coordinate information incorrect")
+        dataset[["lat", "lon"]] = coord_df[["Latitude", "Longitude"]]
+        return dataset
 
     def _save_date_data(self, save_date: datetime):
         date_dataset = {k:[] for k in self.types_size.keys()}
-        for save_hour in range(2):
+        for save_hour in range(1):
             hourly_dataset = {k:[] for k in self.types_size.keys()}
             save_timehour = save_date.replace(hour=save_hour)
             save_timeminute = save_timehour
@@ -92,8 +104,8 @@ class SatelliteData:
             date_str = save_date.strftime("%Y-%m-%d")
             save_path = f"D:/khnp_solar_power/satellite/daily/size{k}/date {date_str} size{k} data.parquet"
             date_size_data = pd.concat(date_dataset[k])
+            date_size_data = self._convert_coord(k, date_size_data)
             date_size_data.to_parquet(save_path)
-            a=3
 
     def save_all_data(self, start_date: datetime, end_date: datetime):
         save_date = start_date
