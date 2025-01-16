@@ -1,9 +1,14 @@
-import requests, h5py
+import requests, h5py, time
 from datetime import datetime, timedelta
-from pyproj import Proj, Transformer
 from io import BytesIO
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
+def _judge_api_time():
+    time_hour = datetime.now().hour
+    judge = (time_hour >= 16 and time_hour <=23)
+    return judge
 
 def _nc_reader_url(url, data_type: str):
     try:
@@ -19,7 +24,7 @@ def _nc_reader_url(url, data_type: str):
         return None
 
 def _data_xy_add(data_type: str, dataset: list):
-    averaged_data = np.round(np.nanmean(dataset, axis=0), 3).astype(np.float16)
+    averaged_data = np.round(np.nanmean(dataset, axis=0), 3).astype(np.int16)
     rows, cols = averaged_data.shape  #cut data의 행의 개수, 열의 개수 -> 행의 개수면 y좌표수랑 같겠죠..
     x, y = np.meshgrid(range(cols), range(rows))
     flattened_data = pd.DataFrame({
@@ -31,13 +36,14 @@ def _data_xy_add(data_type: str, dataset: list):
 
 class SatelliteData:
     def __init__(self):
+        self.big_api_use = _judge_api_time()
         self.data_types = ["VI004", "VI005", "VI006", "VI008", "NR013", "NR016", 
                            "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", 
                            "IR105", "IR112", "IR123", "IR133"]
         self.types_size = {
-            "20": ["VI006"],
-            "10": ["VI004", "VI005", "VI008"],
-            "05": ["NR013", "NR016", "SW038", "WV063", "WV069", "WV073", "IR087", 
+            "3600": ["VI006"],
+            "1800": ["VI004", "VI005", "VI008"],
+            "900": ["NR013", "NR016", "SW038", "WV063", "WV069", "WV073", "IR087", 
                   "IR096", "IR105", "IR112", "IR123", "IR133"]
         }
         self.size_ranges = {
@@ -45,10 +51,12 @@ class SatelliteData:
             (1800, 1800): [(772, 1441), (715, 1327)],  
             (900, 900): [(410, 720), (357, 663)],  
         }
-        # self.auth_key = "-kf5v_egQ6-H-b_3oAOv7A"
-        self.auth_key = "6vdMscAHSSC3TLHABykgvw"
+        if self.big_api_use:
+            self.auth_key = "-kf5v_egQ6-H-b_3oAOv7A"
+        else:
+            self.auth_key = "WyoyNzB6RcWqMjcwekXFMA"
         self.region = "KO"
-        self.download_timedelta = timedelta(minutes=30)
+        self.download_timedelta = timedelta(minutes=60)
 
     def _extract_data(self, data: np.ndarray):
         x_range, y_range = self.size_ranges[data.shape]
@@ -59,13 +67,20 @@ class SatelliteData:
         save_time_str = save_time.strftime('%Y%m%d%H%M')
         type_dataset = {}
         for data_type in self.data_types:
-            # url = f"https://apihub-org.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
-            url = f"https://apihub.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
+            if self.big_api_use:
+                url = f"https://apihub-org.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
+            else:
+                url = f"https://apihub.kma.go.kr/api/typ05/api/GK2A/LE1B/{data_type}/{self.region}/data?date={save_time_str}&authKey={self.auth_key}"
             data = _nc_reader_url(url, data_type)
             data = self._extract_data(data)
             type_dataset[data_type] = data
         return type_dataset
-    
+
+    def _convert_type(self, dataset: pd.DataFrame):
+        dataset[["lat", "lon"]] = dataset[["lat", "lon"]].astype(np.float32)
+        dataset[["hour"]] = dataset[["hour"]].astype(np.int8)
+        return dataset
+
     def _convert_coord(self, size: str, dataset: pd.DataFrame):
         coord_file = f"url2parquet/precomputed_coordinates_res_{size}.parquet"
         coord_df = pd.read_parquet(coord_file)
@@ -73,6 +88,8 @@ class SatelliteData:
         if np.abs(dataset[['x', 'y']] - coord_df[['x', 'y']]).sum().max() > 0:
             raise Exception("coordinate information incorrect")
         dataset[["lat", "lon"]] = coord_df[["Latitude", "Longitude"]]
+        dataset = dataset.drop(columns=["x", "y"])
+        dataset = self._convert_type(dataset)
         return dataset
 
     def _save_date_data(self, save_date: datetime):
@@ -98,13 +115,14 @@ class SatelliteData:
                         continue
             for k in hourly_dataset.keys():
                 hourly_dataset[k]["hour"] = save_hour
-                hourly_dataset[k]["datetime"] = save_date
+                hourly_dataset[k]["datetime"] = np.int32(int(save_date.strftime("%Y%m%d")))
                 date_dataset[k].append(hourly_dataset[k])
         for k in date_dataset.keys():
             date_str = save_date.strftime("%Y-%m-%d")
             save_path = f"D:/khnp_solar_power/satellite/daily/size{k}/date {date_str} size{k} data.parquet"
             date_size_data = pd.concat(date_dataset[k])
             date_size_data = self._convert_coord(k, date_size_data)
+            date_size_data = self._convert_type(date_size_data)
             date_size_data.to_parquet(save_path)
 
     def save_all_data(self, start_date: datetime, end_date: datetime):
@@ -120,7 +138,7 @@ class SatelliteData:
             save_date += timedelta(1)
 
 if __name__ == "__main__":
-    start_date = datetime(2024,7,12)
+    start_date = datetime(2025,1,10)
     end_date = datetime.today().replace(hour=0, minute=0, second=0)
 
     satellite_data = SatelliteData()
