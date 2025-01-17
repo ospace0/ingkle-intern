@@ -60,7 +60,13 @@ class SatelliteData:
 
     def _extract_data(self, data: np.ndarray):
         x_range, y_range = self.size_ranges[data.shape]
-        range_data = data[y_range[0]:y_range[1] +1, x_range[0]:x_range[1] +1]
+        range_data = data[x_range[0]:x_range[1] +1, y_range[0]:y_range[1] +1]
+        # plt.figure(figsize=(12, 8))
+        # plt.subplot(1,2,1)
+        # plt.imshow(data)
+        # plt.subplot(1,2,2)
+        # plt.imshow(range_data)
+        # plt.show()
         return range_data
 
     def _download_types_data(self, save_time: datetime):
@@ -82,9 +88,8 @@ class SatelliteData:
         return dataset
 
     def _convert_coord(self, size: str, dataset: pd.DataFrame):
-        coord_file = f"url2parquet/precomputed_coordinates_res_{size}.parquet"
+        coord_file = f"api/coordinate_size{size}.parquet"
         coord_df = pd.read_parquet(coord_file)
-        coord_df[['y', 'x']] = coord_df[['x', 'y']] - coord_df[['x', 'y']].min(axis=0)
         if np.abs(dataset[['x', 'y']] - coord_df[['x', 'y']]).sum().max() > 0:
             raise Exception("coordinate information incorrect")
         dataset[["lat", "lon"]] = coord_df[["Latitude", "Longitude"]]
@@ -94,7 +99,7 @@ class SatelliteData:
 
     def _save_date_data(self, save_date: datetime):
         date_dataset = {k:[] for k in self.types_size.keys()}
-        for save_hour in range(1):
+        for save_hour in range(24):
             hourly_dataset = {k:[] for k in self.types_size.keys()}
             save_timehour = save_date.replace(hour=save_hour)
             save_timeminute = save_timehour
@@ -114,10 +119,14 @@ class SatelliteData:
                             hourly_dataset[size_type] = pd.merge(hourly_dataset[size_type], in_hour_dataset[data_type], on=['x', 'y'], how='outer')
                         continue
             for k in hourly_dataset.keys():
+                if len(hourly_dataset[k]) < 1:
+                    continue
                 hourly_dataset[k]["hour"] = save_hour
                 hourly_dataset[k]["datetime"] = np.int32(int(save_date.strftime("%Y%m%d")))
                 date_dataset[k].append(hourly_dataset[k])
         for k in date_dataset.keys():
+            if len(date_dataset[k]) < 1:
+                continue
             date_str = save_date.strftime("%Y-%m-%d")
             save_path = f"D:/khnp_solar_power/satellite/daily/size{k}/date {date_str} size{k} data.parquet"
             date_size_data = pd.concat(date_dataset[k])
