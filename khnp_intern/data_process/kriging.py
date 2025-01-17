@@ -74,6 +74,39 @@ class TrainTestKriging:
             raise("Nan value in df.")
         return train_krig_df, valid_krig_df
 
+    def _date_satilite_krig(self, satilite_dt: pd.DataFrame, gen_dt: pd.DataFrame, krig_columns: list):
+        train_krig = []
+        for h in range(1, 24):
+            hour_satilite = satilite_dt[satilite_dt["time"]==h]
+            hour_train_gen = gen_dt[gen_dt["genHour"]==h]
+            hour_train_satilite = pd.DataFrame(index=hour_train_gen.index, columns=krig_columns)
+            hour_train_krig = pd.concat([hour_train_gen[["kpxGenid", "genHour", "lat", "lon"]], hour_train_satilite], axis=1)
+            for s_col in krig_columns:
+                hour_s_satilite = hour_satilite[["lon", "lat", s_col]].dropna(subset=[s_col])
+                if hour_satilite[s_col].std() == 0:
+                    hour_train_krig.loc[:, s_col] = hour_satilite[s_col].mean()
+                else:
+                    try:
+                        satilite_uk = OrdinaryKriging(hour_s_satilite["lon"], hour_s_satilite["lat"], hour_s_satilite[s_col])
+                        hour_s_train_krig, _ = satilite_uk.execute("points", hour_train_gen["lon"], hour_train_gen["lat"])
+                        hour_s_train_krig = np.minimum(np.maximum(hour_s_train_krig, min(hour_s_satilite[s_col])), max(hour_s_satilite[s_col]))
+                        hour_train_krig.loc[:, s_col] = np.array(hour_s_train_krig)
+                        if np.isnan(hour_s_train_krig).any():
+                            raise
+                    except:
+                        val, count = np.unique(hour_satilite[s_col], return_counts=True)
+                        unified_val = val[np.argmax(count)]
+                        hour_train_krig.loc[:, s_col] = unified_val
+                if hour_train_krig.loc[:, s_col].isnull().values.any():
+                    raise Exception("Nan value in df.")
+            train_krig.append(hour_train_krig)
+        train_krig_df = pd.concat(train_krig, ignore_index=True)
+        train_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
+        if train_krig_df.isnull().values.any():
+            raise Exception("Nan value in df.")
+        return train_krig_df       
+
+
     def _date_weather_krig(self, weather_dt: pd.DataFrame, gen_dt: pd.DataFrame, set_valid_gens: list, set_train_gens: list,
                            krig_columns: list):
         valid_gen_dt = gen_dt[np.isin(gen_dt["kpxGenid"], set_valid_gens)]
@@ -128,12 +161,16 @@ class TrainTestKriging:
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
+        satilite_dt = self.original_data.convert_satilite(date_file)
+        krig_satilite_columns = [c for c in satilite_dt.columns if c not in ["time", "lat", "lon"]]
         for set_id in self.validation_set.keys():
             set_valid_gens = self.validation_set[set_id]
             set_train_gens = [i for i in np.unique(gen_dt["kpxGenid"]) if i not in set_valid_gens]
             train_gen, valid_gen = self._date_gen_krig(gen_dt, set_valid_gens, set_train_gens)
             train_weather, valid_weather = self._date_weather_krig(weather_dt, gen_dt, set_valid_gens, set_train_gens, 
                                                                    krig_weather_columns)
+            train_satilite, valid_satilite = self._date_satilite_krig(satilite_dt, gen_dt, set_valid_gens, set_train_gens, 
+                                                                      krig_satilite_columns)
             set_train_data = pd.concat([train_gen, train_weather[krig_weather_columns]], axis=1).reset_index(drop=True)
             set_valid_data = pd.concat([valid_gen, valid_weather[krig_weather_columns]], axis=1).reset_index(drop=True)
             if set_train_data.isnull().values.any():
