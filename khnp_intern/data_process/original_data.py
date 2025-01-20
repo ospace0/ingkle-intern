@@ -21,17 +21,29 @@ class OriginalData:
     def convert_satellite(self, date_file: str):
         sizes = [900, 1800, 3600]
         base_file_name = " ".join(date_file.split()[:2])  # 'date 2025-01-10' 부분만 추출
+        all_data = []
+
         for size in sizes:
             file_path = f"{satellite_path}daily/size{size}/{base_file_name} size{size} data.parquet"
             if os.path.exists(file_path):
                 date_data = pd.read_parquet(file_path)
-                #date_data["time"] = pd.to_datetime(date_data["time"]).dt.strftime("%H").astype(int)
                 date_data["time"] = date_data["hour"].astype(int)
                 date_data.drop(["hour", "datetime"], axis=1, inplace=True)
-                return date_data
-        raise FileNotFoundError(f"No file found for {date_file} in sizes {sizes}")
+                date_data = date_data[["lat", "lon", "time"] + [col for col in date_data.columns if col not in ["lat", "lon", "time"]]]
+                all_data.append(date_data)
 
-# # 예제 사용
+        if not all_data:
+            raise FileNotFoundError(f"No file found for {date_file} in sizes {sizes}")
+
+        # 데이터를 하나의 데이터프레임으로 결합
+        combined_data = pd.concat(all_data, ignore_index=True)
+
+        # 같은 위도와 경도끼리 합치기
+        grouped_data = combined_data.groupby(["lat", "lon", "time"]).mean().reset_index()
+
+        return grouped_data
+
+# 예제 사용
 # original_data = OriginalData()
 # date_file = "date 2025-01-10 data.csv"
 # try:

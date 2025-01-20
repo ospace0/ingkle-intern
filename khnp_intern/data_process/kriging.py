@@ -191,11 +191,20 @@ class TrainTestKriging:
             train_satellite, valid_satellite = self._date_satellite_krig(satellite_dt, gen_dt, set_valid_gens, set_train_gens, 
                                                                       krig_satellite_columns)
             
+
+            # set_train_data = pd.concat([train_gen, train_weather[krig_weather_columns], train_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
+            # set_valid_data = pd.concat([valid_gen, valid_weather[krig_weather_columns], valid_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
+
             set_train_weather = pd.concat([train_gen, train_weather[krig_weather_columns]], axis=1).reset_index(drop=True)
             set_valid_weather = pd.concat([valid_gen, valid_weather[krig_weather_columns]], axis=1).reset_index(drop=True)
             set_train_satellite = pd.concat([train_gen, train_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
             set_valid_satellite = pd.concat([valid_gen, valid_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
 
+            # if set_train_data.isnull().values.any():
+            #     raise Exception("Nan value in df.")
+            # if set_valid_data.isnull().values.any():
+            #     raise Exception("Nan value in df.")
+            
             if set_train_weather.isnull().values.any():
                 raise Exception("Nan value in df.")
             if set_valid_weather.isnull().values.any():
@@ -211,6 +220,11 @@ class TrainTestKriging:
             save_file_name_base = date_file.split(".")[0]
             save_file_name_weather = f"{save_file_name_base}_weather"
             save_file_name_satellite = f"{save_file_name_base}_satellite"
+
+            # np.savez(f"{save_dir}{save_file_name_base}",
+            #             train=np.array(set_train_data), valid=np.array(set_valid_data), 
+            #             columns=np.array(set_train_data.columns))
+            
             np.savez(f"{save_dir}{save_file_name_weather}", 
                      train=np.array(set_train_weather), valid=np.array(set_valid_weather), 
                      columns=np.array(set_train_weather.columns))
