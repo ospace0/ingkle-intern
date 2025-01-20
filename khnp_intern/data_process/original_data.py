@@ -1,5 +1,6 @@
+import os
 import pandas as pd
-from data_process.data_path import weather_path, generator_path
+from data_process.data_path import weather_path, satellite_path, generator_path
 
 class OriginalData:
     def convert_generator(self, date_file: str):
@@ -16,3 +17,25 @@ class OriginalData:
         date_data["time"] = pd.to_datetime(date_data["TM"]).dt.strftime("%H").astype(int)
         date_data.drop(["TM", "alt", "STN"], axis=1, inplace=True)
         return date_data
+
+    def convert_satellite(self, date_file: str):
+        sizes = [900, 1800, 3600]
+        base_file_name = " ".join(date_file.split()[:2])  # 'date 2025-01-10' 부분만 추출
+        for size in sizes:
+            file_path = f"{satellite_path}daily/size{size}/{base_file_name} size{size} data.parquet"
+            if os.path.exists(file_path):
+                date_data = pd.read_parquet(file_path)
+                #date_data["time"] = pd.to_datetime(date_data["time"]).dt.strftime("%H").astype(int)
+                date_data["time"] = date_data["hour"].astype(int)
+                date_data.drop(["hour", "datetime"], axis=1, inplace=True)
+                return date_data
+        raise FileNotFoundError(f"No file found for {date_file} in sizes {sizes}")
+
+# # 예제 사용
+# original_data = OriginalData()
+# date_file = "date 2025-01-10 data.csv"
+# try:
+#     satellite_data = original_data.convert_satellite(date_file)
+#     print(satellite_data.head())
+# except FileNotFoundError as e:
+#     print(e)

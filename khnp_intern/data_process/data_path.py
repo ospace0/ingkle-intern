@@ -1,4 +1,5 @@
 weather_path = "sample data/weather/"
+satellite_path = "sample data/satellite/"
 generator_path = "sample data/generator/"
 satellite_path = "sample data/satellite/"
 kriging_path = "sample data/kriging/"
