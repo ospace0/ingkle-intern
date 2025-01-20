@@ -128,7 +128,7 @@ class SatelliteData:
             if len(date_dataset[k]) < 1:
                 continue
             date_str = save_date.strftime("%Y-%m-%d")
-            save_path = f"D:/khnp_solar_power/satellite/daily/size{k}/date {date_str} size{k} data.parquet"
+            save_path = f"C:/Users/mipi0/OneDrive/바탕 화면/ingkle_intern/khnp_intern/sample data/satelite/daily/size{k}/date {date_str} size{k} data.parquet"
             date_size_data = pd.concat(date_dataset[k])
             date_size_data = self._convert_coord(k, date_size_data)
             date_size_data = self._convert_type(date_size_data)
