@@ -1,5 +1,5 @@
 import pandas as pd
-from data_process.data_path import weather_path, generator_path
+from data_process.data_path import weather_path, generator_path, satellite_path
 
 class OriginalData:
     def convert_generator(self, date_file: str):
@@ -16,3 +16,11 @@ class OriginalData:
         date_data["time"] = pd.to_datetime(date_data["TM"]).dt.strftime("%H").astype(int)
         date_data.drop(["TM", "alt", "STN"], axis=1, inplace=True)
         return date_data
+  
+    def convert_satellite(self, date_file: str):
+        all_date_data = {}
+        for key, path in satellite_path.items():
+            full_path = (f"{path}daily/{date_file}")
+            data = pd.read_parquet(full_path)
+            all_date_data[key] = data
+        return all_date_data 

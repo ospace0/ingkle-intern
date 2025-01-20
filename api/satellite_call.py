@@ -46,7 +46,7 @@ class SatelliteData:
             (900, 900): [(410, 720), (357, 663)],  
         }
         # self.auth_key = "-kf5v_egQ6-H-b_3oAOv7A"
-        self.auth_key = "6vdMscAHSSC3TLHABykgvw"
+        self.auth_key = "c4GK7IkiRoWBiuyJIhaFgQ"
         self.region = "KO"
         self.download_timedelta = timedelta(minutes=30)
 
@@ -77,7 +77,7 @@ class SatelliteData:
 
     def _save_date_data(self, save_date: datetime):
         date_dataset = {k:[] for k in self.types_size.keys()}
-        for save_hour in range(1):
+        for save_hour in range(24):
             hourly_dataset = {k:[] for k in self.types_size.keys()}
             save_timehour = save_date.replace(hour=save_hour)
             save_timeminute = save_timehour
@@ -102,7 +102,7 @@ class SatelliteData:
                 date_dataset[k].append(hourly_dataset[k])
         for k in date_dataset.keys():
             date_str = save_date.strftime("%Y-%m-%d")
-            save_path = f"D:/khnp_solar_power/satellite/daily/size{k}/date {date_str} size{k} data.parquet"
+            save_path = f"C:/Users/mipi0/OneDrive/바탕 화면/ingkle_intern/khnp_intern/sample data/satelite/daily/size{k}/date {date_str} size{k} data.parquet"
             date_size_data = pd.concat(date_dataset[k])
             date_size_data = self._convert_coord(k, date_size_data)
             date_size_data.to_parquet(save_path)
