@@ -204,6 +204,9 @@ class TrainTestKriging:
                     combined_train_satellite = pd.concat([combined_train_satellite, train_satellite[wa_satellite_columns]], axis=1)
                     combined_valid_satellite = pd.concat([combined_valid_satellite, valid_satellite[wa_satellite_columns]], axis=1)
 
+                    combined_train_satellite = combined_train_satellite.loc[:, ~combined_train_satellite.columns.duplicated()]
+                    combined_valid_satellite = combined_valid_satellite.loc[:, ~combined_valid_satellite.columns.duplicated()]
+
             set_train_data = pd.concat([train_gen, train_weather[krig_weather_columns], combined_train_satellite], axis=1).reset_index(drop=True)
             set_valid_data = pd.concat([valid_gen, valid_weather[krig_weather_columns], combined_valid_satellite], axis=1).reset_index(drop=True)
 
