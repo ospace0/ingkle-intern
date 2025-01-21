@@ -5,6 +5,7 @@ from pykrige.ok import OrdinaryKriging
 from data_process.data_path import generator_path, kriging_path, estimation_path
 from data_process.split import read_validation_set
 from data_process.original_data import OriginalData
+from data_process.wa_data import weight_satellite
 
 class TrainTestKriging:
     def __init__(self):
@@ -75,55 +76,53 @@ class TrainTestKriging:
         return train_krig_df, valid_krig_df
 
 
-    def _date_satellite_krig(self, satellite_dt: pd.DataFrame, gen_dt: pd.DataFrame, set_valid_gens: list, set_train_gens: list,
+    def _date_satellite_wa(self, satellite_dt: pd.DataFrame, gen_dt: pd.DataFrame, set_valid_gens: list, set_train_gens: list,
                          krig_columns: list):
-        valid_gen_dt = gen_dt[np.isin(gen_dt["kpxGenid"], set_valid_gens)]
         train_gen_dt = gen_dt[np.isin(gen_dt["kpxGenid"], set_train_gens)]
-        valid_krig, train_krig = [], []
+        valid_gen_dt = gen_dt[np.isin(gen_dt["kpxGenid"], set_valid_gens)]
+
+        valid_wa, train_wa = [], []
         for h in range(1, 24):
             hour_satellite = satellite_dt[satellite_dt["time"]==h]
             hour_train_gen = train_gen_dt[train_gen_dt["genHour"]==h]
             hour_valid_gen = valid_gen_dt[valid_gen_dt["genHour"]==h]
             hour_train_satellite = pd.DataFrame(index=hour_train_gen.index, columns=krig_columns)
             hour_valid_satellite = pd.DataFrame(index=hour_valid_gen.index, columns=krig_columns)
-            hour_valid_krig = pd.concat([hour_valid_gen[["kpxGenid", "genHour", "lat", "lon"]], hour_valid_satellite], axis=1)
-            hour_train_krig = pd.concat([hour_train_gen[["kpxGenid", "genHour", "lat", "lon"]], hour_train_satellite], axis=1)
+            hour_train_wa = pd.concat([hour_train_gen[["kpxGenid", "genHour", "lat", "lon"]], hour_train_satellite], axis=1)
+            hour_valid_wa = pd.concat([hour_valid_gen[["kpxGenid", "genHour", "lat", "lon"]], hour_valid_satellite], axis=1)
+
             for s_col in krig_columns:
                 hour_s_satellite = hour_satellite[["lon", "lat", s_col]].dropna(subset=[s_col])
                 if hour_satellite[s_col].std() == 0:
-                    hour_valid_krig.loc[:, s_col] = hour_satellite[s_col].mean()
-                    hour_train_krig.loc[:, s_col] = hour_satellite[s_col].mean()
+                    hour_valid_wa.loc[:, s_col] = hour_satellite[s_col].mean()
+                    hour_train_wa.loc[:, s_col] = hour_satellite[s_col].mean()
                 else:
                     try:
-                        satellite_uk = OrdinaryKriging(hour_s_satellite["lon"], hour_s_satellite["lat"], hour_s_satellite[s_col])
-                        hour_s_valid_krig, _ = satellite_uk.execute("points", hour_valid_gen["lon"], hour_valid_gen["lat"])
-                        if np.isnan(hour_s_valid_krig).any():
-                            raise
-                        hour_s_train_krig, _ = satellite_uk.execute("points", hour_train_gen["lon"], hour_train_gen["lat"])
-                        hour_s_valid_krig = np.minimum(np.maximum(hour_s_valid_krig, min(hour_s_satellite[s_col])), max(hour_s_satellite[s_col]))
-                        hour_s_train_krig = np.minimum(np.maximum(hour_s_train_krig, min(hour_s_satellite[s_col])), max(hour_s_satellite[s_col]))
-                        hour_valid_krig.loc[:, s_col] = np.array(hour_s_valid_krig)
-                        hour_train_krig.loc[:, s_col] = np.array(hour_s_train_krig)
+                        hour_s_valid_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_valid_gen[["lat", "lon"]])
+                        hour_s_train_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_train_gen[["lat", "lon"]])
+
+                        hour_valid_wa.loc[:, s_col] = np.array(hour_s_valid_wa)
+                        hour_train_wa.loc[:, s_col] = np.array(hour_s_train_wa)
                     except:
                         val, count = np.unique(hour_satellite[s_col], return_counts=True)
                         unified_val = val[np.argmax(count)]
-                        hour_valid_krig.loc[:, s_col] = unified_val
-                        hour_train_krig.loc[:, s_col] = unified_val
-                if hour_train_krig.loc[:, s_col].isnull().values.any():
+                        hour_valid_wa.loc[:, s_col] = unified_val
+                        hour_train_wa.loc[:, s_col] = unified_val
+                if hour_train_wa.loc[:, s_col].isnull().values.any():
                     raise Exception("Nan value in df.")
-                if hour_valid_krig.loc[:, s_col].isnull().values.any():
+                if hour_valid_wa.loc[:, s_col].isnull().values.any():
                     raise Exception("Nan value in df.")
-            valid_krig.append(hour_valid_krig)
-            train_krig.append(hour_train_krig)
-        valid_krig_df = pd.concat(valid_krig, ignore_index=True)
-        train_krig_df = pd.concat(train_krig, ignore_index=True)
-        valid_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
-        train_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
-        if train_krig_df.isnull().values.any():
+            valid_wa.append(hour_valid_wa)
+            train_wa.append(hour_train_wa)
+        valid_wa_df = pd.concat(valid_wa, ignore_index=True)
+        train_wa_df = pd.concat(train_wa, ignore_index=True)
+        valid_wa_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
+        train_wa_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
+        if train_wa_df.isnull().values.any():
             raise Exception("Nan value in df.")
-        if valid_krig_df.isnull().values.any():
+        if valid_wa_df.isnull().values.any():
             raise Exception("Nan value in df.")
-        return train_krig_df, valid_krig_df
+        return train_wa_df, valid_wa_df
 
 
     def _date_weather_krig(self, weather_dt: pd.DataFrame, gen_dt: pd.DataFrame, set_valid_gens: list, set_train_gens: list,
@@ -179,39 +178,38 @@ class TrainTestKriging:
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
-        satellite_dt = self.original_data.convert_satellite(date_file)
+        satellite_dt_dict = self.original_data.convert_satellite(date_file)  # 딕셔너리로 반환
+
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
-        krig_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "date_time", "lat", "lon"]]
+        
         for set_id in self.validation_set.keys():
             set_valid_gens = self.validation_set[set_id]
             set_train_gens = [i for i in np.unique(gen_dt["kpxGenid"]) if i not in set_valid_gens]
             train_gen, valid_gen = self._date_gen_krig(gen_dt, set_valid_gens, set_train_gens)
             train_weather, valid_weather = self._date_weather_krig(weather_dt, gen_dt, set_valid_gens, set_train_gens, 
                                                                    krig_weather_columns)
-            train_satellite, valid_satellite = self._date_satellite_krig(satellite_dt, gen_dt, set_valid_gens, set_train_gens, 
-                                                                      krig_satellite_columns)
             
-
-            # set_train_data = pd.concat([train_gen, train_weather[krig_weather_columns], train_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
-            # set_valid_data = pd.concat([valid_gen, valid_weather[krig_weather_columns], valid_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
-
-            set_train_weather = pd.concat([train_gen, train_weather[krig_weather_columns]], axis=1).reset_index(drop=True)
-            set_valid_weather = pd.concat([valid_gen, valid_weather[krig_weather_columns]], axis=1).reset_index(drop=True)
-            set_train_satellite = pd.concat([train_gen, train_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
-            set_valid_satellite = pd.concat([valid_gen, valid_satellite[krig_satellite_columns]], axis=1).reset_index(drop=True)
-
-            # if set_train_data.isnull().values.any():
-            #     raise Exception("Nan value in df.")
-            # if set_valid_data.isnull().values.any():
-            #     raise Exception("Nan value in df.")
+            combined_train_satellite = None
+            combined_valid_satellite = None
             
-            if set_train_weather.isnull().values.any():
+            for size, satellite_dt in satellite_dt_dict.items():
+                wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "date_time", "lat", "lon"]]
+                train_satellite, valid_satellite = self._date_satellite_wa(satellite_dt, gen_dt, set_valid_gens, set_train_gens, 
+                                                                          wa_satellite_columns)
+
+                if combined_train_satellite is None:
+                    combined_train_satellite = train_satellite[wa_satellite_columns]
+                    combined_valid_satellite = valid_satellite[wa_satellite_columns]
+                else:
+                    combined_train_satellite = pd.concat([combined_train_satellite, train_satellite[wa_satellite_columns]], axis=1)
+                    combined_valid_satellite = pd.concat([combined_valid_satellite, valid_satellite[wa_satellite_columns]], axis=1)
+
+            set_train_data = pd.concat([train_gen, train_weather[krig_weather_columns], combined_train_satellite], axis=1).reset_index(drop=True)
+            set_valid_data = pd.concat([valid_gen, valid_weather[krig_weather_columns], combined_valid_satellite], axis=1).reset_index(drop=True)
+
+            if set_train_data.isnull().values.any():
                 raise Exception("Nan value in df.")
-            if set_valid_weather.isnull().values.any():
-                raise Exception("Nan value in df.")
-            if set_train_satellite.isnull().values.any():
-                raise Exception("Nan value in df.")
-            if set_valid_satellite.isnull().values.any():
+            if set_valid_data.isnull().values.any():
                 raise Exception("Nan value in df.")
             
             save_dir = f"{kriging_path}{set_id}/"
@@ -221,16 +219,16 @@ class TrainTestKriging:
             save_file_name_weather = f"{save_file_name_base}_weather"
             save_file_name_satellite = f"{save_file_name_base}_satellite"
 
-            # np.savez(f"{save_dir}{save_file_name_base}",
-            #             train=np.array(set_train_data), valid=np.array(set_valid_data), 
-            #             columns=np.array(set_train_data.columns))
+            np.savez(f"{save_dir}{save_file_name_base}",
+                        train=np.array(set_train_data), valid=np.array(set_valid_data), 
+                        columns=np.array(set_train_data.columns))
             
-            np.savez(f"{save_dir}{save_file_name_weather}", 
-                     train=np.array(set_train_weather), valid=np.array(set_valid_weather), 
-                     columns=np.array(set_train_weather.columns))
-            np.savez(f"{save_dir}{save_file_name_satellite}",
-                        train=np.array(set_train_satellite), valid=np.array(set_valid_satellite),
-                        columns=np.array(set_train_satellite.columns))
+            # np.savez(f"{save_dir}{save_file_name_weather}", 
+            #          train=np.array(set_train_weather), valid=np.array(set_valid_weather), 
+            #          columns=np.array(set_train_weather.columns))
+            # np.savez(f"{save_dir}{save_file_name_satellite}",
+            #             train=np.array(set_train_satellite), valid=np.array(set_valid_satellite),
+            #             columns=np.array(set_train_satellite.columns))
 
     def daily_krig(self):
         save_dir = f"{kriging_path}set0/"
