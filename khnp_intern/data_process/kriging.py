@@ -178,7 +178,7 @@ class TrainTestKriging:
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
-        satellite_dt_dict = self.original_data.convert_satellite(date_file)  # 딕셔너리로 반환
+        satellite_dt_dict = self.original_data.convert_satellite(date_file) 
 
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
         
@@ -204,8 +204,8 @@ class TrainTestKriging:
                     combined_train_satellite = pd.concat([combined_train_satellite, train_satellite[wa_satellite_columns]], axis=1)
                     combined_valid_satellite = pd.concat([combined_valid_satellite, valid_satellite[wa_satellite_columns]], axis=1)
 
-                    combined_train_satellite = combined_train_satellite.loc[:, ~combined_train_satellite.columns.duplicated()]
-                    combined_valid_satellite = combined_valid_satellite.loc[:, ~combined_valid_satellite.columns.duplicated()]
+                    combined_train_satellite = combined_train_satellite.drop(columns=['time'], errors='ignore')
+                    combined_valid_satellite = combined_valid_satellite.drop(columns=['time'], errors='ignore')
 
             set_train_data = pd.concat([train_gen, train_weather[krig_weather_columns], combined_train_satellite], axis=1).reset_index(drop=True)
             set_valid_data = pd.concat([valid_gen, valid_weather[krig_weather_columns], combined_valid_satellite], axis=1).reset_index(drop=True)
@@ -219,28 +219,17 @@ class TrainTestKriging:
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             save_file_name_base = date_file.split(".")[0]
-            save_file_name_weather = f"{save_file_name_base}_weather"
-            save_file_name_satellite = f"{save_file_name_base}_satellite"
 
             np.savez(f"{save_dir}{save_file_name_base}",
                         train=np.array(set_train_data), valid=np.array(set_valid_data), 
                         columns=np.array(set_train_data.columns))
             
-            # np.savez(f"{save_dir}{save_file_name_weather}", 
-            #          train=np.array(set_train_weather), valid=np.array(set_valid_weather), 
-            #          columns=np.array(set_train_weather.columns))
-            # np.savez(f"{save_dir}{save_file_name_satellite}",
-            #             train=np.array(set_train_satellite), valid=np.array(set_valid_satellite),
-            #             columns=np.array(set_train_satellite.columns))
-
     def daily_krig(self):
         save_dir = f"{kriging_path}set0/"
         for date_file in self.data_files:
             save_file_name = date_file.split(".")[0]
             save_file_name = f"{save_file_name}.npz"
             
-            # if save_file_name in os.listdir(save_dir):
-            #     continue
             print(date_file)
             self._date_krig(date_file)
 
