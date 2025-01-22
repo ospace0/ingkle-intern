@@ -1,0 +1,55 @@
+import unittest
+import pandas as pd
+import numpy as np
+from data_process.kriging import TrainTestKriging
+
+class TestDateSatelliteWa(unittest.TestCase):
+    def setUp(self):
+        self.kriging = TrainTestKriging()
+        self.satellite_dt = pd.DataFrame({
+            'time': [1, 1, 2, 2],
+            'lat': [35.0, 36.0, 35.0, 36.0],
+            'lon': [127.0, 128.0, 127.0, 128.0],
+            's_col1': [0.1, 0.2, 0.3, 0.4],
+            's_col2': [0.5, 0.6, 0.7, 0.8]
+        })
+        self.gen_dt = pd.DataFrame({
+            'kpxGenid': [1, 2, 1, 2],
+            'genHour': [1, 1, 2, 2],
+            'lat': [35.0, 36.0, 35.0, 36.0],
+            'lon': [127.0, 128.0, 127.0, 128.0]
+        })
+        self.set_valid_gens = [1]
+        self.set_train_gens = [2]
+        self.krig_columns = ['s_col1', 's_col2']
+
+    def test_date_satellite_wa_valid_input(self):
+        train_wa_df, valid_wa_df = self.kriging._date_satellite_wa(
+            self.satellite_dt, self.gen_dt, self.set_valid_gens, self.set_train_gens, self.krig_columns
+        )
+        self.assertFalse(train_wa_df.isnull().values.any())
+        self.assertFalse(valid_wa_df.isnull().values.any())
+        self.assertEqual(train_wa_df.shape[1], 6)
+        self.assertEqual(valid_wa_df.shape[1], 6)
+
+    def test_date_satellite_wa_empty_input(self):
+        empty_satellite_dt = pd.DataFrame(columns=self.satellite_dt.columns)
+        empty_gen_dt = pd.DataFrame(columns=self.gen_dt.columns)
+        train_wa_df, valid_wa_df = self.kriging._date_satellite_wa(
+            empty_satellite_dt, empty_gen_dt, self.set_valid_gens, self.set_train_gens, self.krig_columns
+        )
+        self.assertTrue(train_wa_df.empty)
+        self.assertTrue(valid_wa_df.empty)
+
+    def test_date_satellite_wa_nan_values(self):
+        nan_satellite_dt = self.satellite_dt.copy()
+        nan_satellite_dt.loc[0, 's_col1'] = np.nan
+        nan_gen_dt = self.gen_dt.copy()
+        nan_gen_dt.loc[0, 'lat'] = np.nan
+        with self.assertRaises(Exception):
+            self.kriging._date_satellite_wa(
+                nan_satellite_dt, nan_gen_dt, self.set_valid_gens, self.set_train_gens, self.krig_columns
+            )
+
+if __name__ == '__main__':
+    unittest.main(exit=False)
