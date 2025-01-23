@@ -97,17 +97,11 @@ class TrainTestKriging:
                     hour_valid_wa.loc[:, s_col] = hour_satellite[s_col].mean()
                     hour_train_wa.loc[:, s_col] = hour_satellite[s_col].mean()
                 else:
-                    try:
                         hour_s_valid_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_valid_gen[["lat", "lon"]])
                         hour_s_train_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_train_gen[["lat", "lon"]])
 
                         hour_valid_wa.loc[:, s_col] = np.array(hour_s_valid_wa)
                         hour_train_wa.loc[:, s_col] = np.array(hour_s_train_wa)
-                    except:
-                        val, count = np.unique(hour_satellite[s_col], return_counts=True)
-                        unified_val = val[np.argmax(count)]
-                        hour_valid_wa.loc[:, s_col] = unified_val
-                        hour_train_wa.loc[:, s_col] = unified_val
                 if hour_train_wa.loc[:, s_col].isnull().values.any():
                     raise Exception("Nan value in df.")
                 if hour_valid_wa.loc[:, s_col].isnull().values.any():
@@ -192,7 +186,7 @@ class TrainTestKriging:
             combined_train_satellite = None
             combined_valid_satellite = None
             
-            for size, satellite_dt in satellite_dt_dict.items():
+            for satellite_dt in satellite_dt_dict.values():
                 wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "date_time", "lat", "lon"]]
                 train_satellite, valid_satellite = self._date_satellite_wa(satellite_dt, gen_dt, set_valid_gens, set_train_gens, 
                                                                           wa_satellite_columns)
@@ -289,13 +283,8 @@ class WholeTrainKriging:
                 if hour_satellite[s_col].std() == 0:
                     hour_train_wa.loc[:, s_col] = hour_satellite[s_col].mean()
                 else:
-                    try:
                         hour_s_train_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_train_gen[["lat", "lon"]])
                         hour_train_wa.loc[:, s_col] = np.array(hour_s_train_wa)
-                    except:
-                        val, count = np.unique(hour_satellite[s_col], return_counts=True)
-                        unified_val = val[np.argmax(count)]
-                        hour_train_wa.loc[:, s_col] = unified_val
                 if hour_train_wa.loc[:, s_col].isnull().values.any():
                     raise Exception("Nan value in df.")
             train_wa.append(hour_train_wa)
@@ -361,7 +350,7 @@ class WholeTrainKriging:
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
         gen_krig = self._date_gen_krig(gen_dt)
         weather_krig = self._date_weather_krig(weather_dt, gen_dt, krig_weather_columns)  
-        for size, satellite_dt in satellite_dt_dict.items():
+        for satellite_dt in satellite_dt_dict.values():
             wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "date_time", "lat", "lon"]]
             satellite_wa = self._date_satellite_wa(satellite_dt, gen_dt, wa_satellite_columns)
             combined_satellite_wa = None
@@ -445,13 +434,8 @@ class EstimateKriging:
                 if hour_satellite[s_col].std() == 0:
                     hour_wa_data.loc[:, s_col] = hour_satellite[s_col].mean()
                 else:
-                    try:
-                        hour_s_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_satellite[["lat", "lon"]])
-                        hour_wa_data.loc[:, s_col] = np.array(hour_s_wa)
-                    except:
-                        val, count = np.unique(hour_satellite[s_col], return_counts=True)
-                        unified_val = val[np.argmax(count)]
-                        hour_wa_data.loc[:, s_col] = unified_val
+                    hour_s_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_wa_data[["lat", "lon"]]) #here
+                    hour_wa_data.loc[:, s_col] = np.array(hour_s_wa)
                 if hour_wa_data.loc[:, s_col].isnull().values.any():
                     raise Exception("Nan value in df.")
             all_wa.append(hour_wa_data)
@@ -514,15 +498,14 @@ class EstimateKriging:
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
-        satellite_dt_dict = self.original_data.convert_satellite(date_file) 
+        satellite_dt_list = self.original_data.convert_satellite(date_file) 
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
         gen_krig = self._date_gen_krig(gen_dt)
         weather_krig = self._date_weather_krig(weather_dt, krig_weather_columns)  
         combined_satellite_wa = None
-        for size, satellite_dt in satellite_dt_dict.items():
-            wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "date_time", "lat", "lon"]]
+        for satellite_dt in satellite_dt_list.values():
+            wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["time", "date_time", "lat", "lon"]]
             satellite_wa = self._date_satellite_wa(satellite_dt, wa_satellite_columns)
-
             if combined_satellite_wa is None:
                 combined_satellite_wa = satellite_wa[wa_satellite_columns]
             else:
