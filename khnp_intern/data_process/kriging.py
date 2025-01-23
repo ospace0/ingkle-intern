@@ -327,22 +327,6 @@ class WholeTrainKriging:
             raise Exception("Nan value in df.")
         return train_krig_df
 
-    # def _date_krig(self, date_file: str):
-    #     gen_dt = self.original_data.convert_generator(date_file)
-    #     weather_dt = self.original_data.convert_weather(date_file)
-    #     krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
-    #     gen_krig = self._date_gen_krig(gen_dt)
-    #     weather_krig = self._date_weather_krig(weather_dt, gen_dt, krig_weather_columns)
-    #     combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=True)
-    #     if combined_data.isnull().values.any():
-    #         raise Exception("Nan value in df.")
-    #     save_dir = f"{estimation_path}kriging_input/train/"
-    #     if not os.path.exists(save_dir):
-    #         os.makedirs(save_dir)
-    #     save_file_name = date_file.split(".")[0]
-    #     combined_data.to_parquet(f"{save_dir}{save_file_name}.parquet")
-
-        
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
@@ -422,11 +406,11 @@ class EstimateKriging:
   
     def _date_satellite_wa(self, satellite_dt: pd.DataFrame, krig_columns: list):
         wa_data_cols = ["genHour", "lat", "lon"] + krig_columns
+        hour_wa_data = pd.DataFrame(columns=wa_data_cols, index=range(len(self.pred_coords)))
+        hour_wa_data.loc[:, ["lat", "lon"]] = self.pred_coords
+        hour_wa_data = hour_wa_data.astype({"lat": 'float64', "lon": "float64"})
         all_wa = []
         for h in range(1, 24):
-            hour_wa_data = pd.DataFrame(columns=wa_data_cols, index=range(len(self.pred_coords)))
-            hour_wa_data.loc[:, ["lat", "lon"]] = self.pred_coords
-            hour_wa_data = hour_wa_data.astype({"lat": 'float64', "lon": "float64"})
             hour_wa_data.loc[:, "genHour"] = h
             hour_satellite = satellite_dt[satellite_dt["time"]==h]
             for s_col in krig_columns:
@@ -447,11 +431,11 @@ class EstimateKriging:
     
     def _date_weather_krig(self, weather_dt: pd.DataFrame, krig_columns: list):
         krig_data_cols = ["genHour", "lat", "lon"] + krig_columns
+        hour_krig_data = pd.DataFrame(columns=krig_data_cols, index=range(len(self.pred_coords)))
+        hour_krig_data.loc[:, ["lat", "lon"]] = self.pred_coords
+        hour_krig_data = hour_krig_data.astype({"lat": 'float64', "lon": "float64"})
         all_krig = []
         for h in range(1, 24):
-            hour_krig_data = pd.DataFrame(columns=krig_data_cols, index=range(len(self.pred_coords)))
-            hour_krig_data.loc[:, ["lat", "lon"]] = self.pred_coords
-            hour_krig_data = hour_krig_data.astype({"lat": 'float64', "lon": "float64"})
             hour_krig_data.loc[:, "genHour"] = h
             hour_weather = weather_dt[weather_dt["time"]==h]
             for w_col in krig_columns:
@@ -478,22 +462,6 @@ class EstimateKriging:
         if all_krig_df.isnull().values.any():
             raise Exception("Nan value in df.")
         return all_krig_df
-
-    # def _date_krig(self, date_file: str):
-    #     gen_dt = self.original_data.convert_generator(date_file)
-    #     weather_dt = self.original_data.convert_weather(date_file)
-    #     krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
-    #     gen_krig = self._date_gen_krig(gen_dt)
-    #     weather_krig = self._date_weather_krig(weather_dt, krig_weather_columns)
-    #     combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=True)
-    #     if combined_data.isnull().values.any():
-    #         raise Exception("Nan value in df.")
-    #     save_dir = f"{estimation_path}kriging_input/estimation/"
-    #     if not os.path.exists(save_dir):
-    #         os.makedirs(save_dir)
-    #     save_file_name = date_file.split(".")[0]
-    #     combined_data.to_parquet(f"{save_dir}{save_file_name}.parquet")
-
 
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
