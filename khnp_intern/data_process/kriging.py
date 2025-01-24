@@ -408,26 +408,37 @@ class EstimateKriging:
         wa_data_cols = ["genHour", "lat", "lon"] + krig_columns
         hour_wa_data = pd.DataFrame(columns=wa_data_cols, index=range(len(self.pred_coords)))
         hour_wa_data.loc[:, ["lat", "lon"]] = self.pred_coords
-        hour_wa_data = hour_wa_data.astype({"lat": 'float64', "lon": "float64"})
+        hour_coord = hour_wa_data[["lat","lon"]].astype({"lat": 'float64', "lon": "float64"})
         all_wa = []
-        for h in range(1, 24):
-            hour_wa_data.loc[:, "genHour"] = h
-            hour_satellite = satellite_dt[satellite_dt["time"]==h]
-            for s_col in krig_columns:
-                hour_s_satellite = hour_satellite[["lon", "lat", s_col]].dropna(subset=[s_col])
-                if hour_satellite[s_col].std() == 0:
-                    hour_wa_data.loc[:, s_col] = hour_satellite[s_col].mean()
-                else:
-                    hour_s_wa = weight_satellite(hour_s_satellite[["lat", "lon", s_col]], hour_wa_data[["lat", "lon"]]) #here
-                    hour_wa_data.loc[:, s_col] = np.array(hour_s_wa)
-                if hour_wa_data.loc[:, s_col].isnull().values.any():
-                    raise Exception("Nan value in df.")
-            all_wa.append(hour_wa_data)
-        all_wa_df = pd.concat(all_wa, ignore_index=True)  
+        for _, gen in hour_coord.iterrows():
+            lat, lon = gen['lat'], gen['lon']
+            lat, lon = gen['lat'], gen['lon']
+            relevant_data = satellite_dt[(satellite_dt['lat'] >= lat - 0.5) & (satellite_dt['lat'] <= lat + 0.5) &
+                                        (satellite_dt['lon'] >= lon - 0.5) & (satellite_dt['lon'] <= lon + 0.5)]
+            box = relevant_data[relevant_data['time'] == 0][['lat', 'lon']]
+            distances = np.sqrt((box['lat'] - lat)**2 + (box['lon'] - lon)**2)
+            weights = 1 / (distances + 1e-6)
+        
+            for h in range(1, 24):
+                gen_df = pd.DataFrame([gen])
+                gen_df["genHour"] = h
+                hour_satellite = satellite_dt[satellite_dt["time"]==h]
+                for s_col in krig_columns:
+                    if hour_satellite[s_col].std() == 0:
+                        gen_df.loc[:, s_col] = hour_satellite[s_col].mean()
+                    else:
+                        hour_s_wa = weight_satellite(weights, relevant_data, s_col) #here
+                        gen_df.loc[:, s_col] = np.array(hour_s_wa)
+                    if gen_df.loc[:, s_col].isnull().values.any():
+                        raise Exception("Nan value in df.") 
+                all_wa.append(gen_df)
+        all_wa_df = pd.concat(all_wa, ignore_index=True) 
         all_wa_df.sort_values(by=["genHour", "lat", "lon"], inplace=True)
         if all_wa_df.isnull().values.any():
             raise Exception("Nan value in df.")
         return all_wa_df
+
+        
     
     def _date_weather_krig(self, weather_dt: pd.DataFrame, krig_columns: list):
         krig_data_cols = ["genHour", "lat", "lon"] + krig_columns
