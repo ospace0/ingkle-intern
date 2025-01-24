@@ -415,8 +415,8 @@ class EstimateKriging:
             lat, lon = gen['lat'], gen['lon']
             relevant_data = satellite_dt[(satellite_dt['lat'] >= lat - 0.5) & (satellite_dt['lat'] <= lat + 0.5) &
                                         (satellite_dt['lon'] >= lon - 0.5) & (satellite_dt['lon'] <= lon + 0.5)]
-            box = relevant_data[relevant_data['time'] == 0][['lat', 'lon']]
-            distances = np.sqrt((box['lat'] - lat)**2 + (box['lon'] - lon)**2)
+            # box = relevant_data[relevant_data['time'] == 0][['lat', 'lon']]
+            distances = np.sqrt((relevant_data['lat'] - lat)**2 + (relevant_data['lon'] - lon)**2)
             weights = 1 / (distances + 1e-6)
         
             for h in range(1, 24):
@@ -477,20 +477,13 @@ class EstimateKriging:
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
-        satellite_dt_list = self.original_data.convert_satellite(date_file) 
+        satellite_dt = self.original_data.convert_satellite(date_file) 
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
+        wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["time", "date_time", "lat", "lon"]]
         gen_krig = self._date_gen_krig(gen_dt)
         weather_krig = self._date_weather_krig(weather_dt, krig_weather_columns)  
-        combined_satellite_wa = None
-        for satellite_dt in satellite_dt_list.values():
-            wa_satellite_columns = [c for c in satellite_dt.columns if c not in ["time", "date_time", "lat", "lon"]]
-            satellite_wa = self._date_satellite_wa(satellite_dt, wa_satellite_columns)
-            if combined_satellite_wa is None:
-                combined_satellite_wa = satellite_wa[wa_satellite_columns]
-            else:
-                combined_satellite_wa = pd.concat([combined_satellite_wa, satellite_wa[wa_satellite_columns]], axis=1)
-                combined_satellite_wa = combined_satellite_wa.drop(columns=['time'], errors='ignore')
-        combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns], combined_satellite_wa], axis=1).reset_index(drop=True)  
+        satellite_wa = self._date_satellite_wa(satellite_dt, wa_satellite_columns)
+        combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns], satellite_wa[wa_satellite_columns]], axis=1).reset_index(drop=True)  
         if combined_data.isnull().values.any():
             raise Exception("Nan value in df.")
         save_dir = f"{estimation_path}kriging_input/estimation/"

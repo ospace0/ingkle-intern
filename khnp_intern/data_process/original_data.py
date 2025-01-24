@@ -19,20 +19,14 @@ class OriginalData:
         return date_data
 
     def convert_satellite(self, date_file: str):
-        sizes = [900, 1800, 3600]
         base_file_name = " ".join(date_file.split()[:2])  # 'date 2025-01-10' 부분만 추출
-        all_data = {}
+    
 
-        for size in sizes:
-            file_path = f"{satellite_path}daily/size{size}/{base_file_name} size{size} data.parquet"
-            if os.path.exists(file_path):
-                date_data = pd.read_parquet(file_path)
-                date_data["time"] = date_data["hour"].astype(int)
-                date_data.drop(["hour", "datetime"], axis=1, inplace=True)
-                date_data = date_data[["lat", "lon", "time"] + [col for col in date_data.columns if col not in ["lat", "lon", "time"]]]
-                all_data[size] = date_data
-
-        if not all_data:
-            raise FileNotFoundError(f"No file found for {date_file} in sizes {sizes}")
-
-        return all_data
+        file_path = f"{satellite_path}daily/size900/{base_file_name} size900 data.parquet"
+        if os.path.exists(file_path):
+            date_data = pd.read_parquet(file_path)
+            date_data["time"] = date_data["hour"].astype(int)
+            date_data.drop(["hour", "datetime"], axis=1, inplace=True)
+            date_data = date_data[["lat", "lon", "time"] + [col for col in date_data.columns if col not in ["lat", "lon", "time"]]]
+             
+        return date_data

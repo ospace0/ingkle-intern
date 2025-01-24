@@ -2,11 +2,9 @@ import numpy as np
 import pandas as pd
 
 def weight_satellite(weights, relevant_data: pd.DataFrame, s_col) -> list:
-    weighted_average = pd.DataFrame()  
     weighted_sum = np.sum(weights * relevant_data[s_col])
     sum_of_weights = np.sum(weights)
     weighted_avg = weighted_sum / sum_of_weights
-    
     return weighted_avg
     
 
