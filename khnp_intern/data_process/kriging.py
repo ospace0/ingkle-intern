@@ -442,7 +442,7 @@ class EstimateKriging:
                 if hour_w_satellite[w_col].std() == 0:
                     hour_krig_data.loc[:, w_col] = hour_w_satellite[w_col].mean()
                 else:
-                    weighthour = cal_satellite_try(hour_w_satellite, hour_krig_data['lat'], hour_krig_data['lon'])
+                    weighthour = cal_satellite(hour_w_satellite, hour_krig_data['lat'], hour_krig_data['lon'])
                     weight.append(weighthour) # 1시간의 가중치 저장
                 if hour_krig_data.loc[:, w_col].isnull().values.any():
                     raise Exception("Nan value in df.")
