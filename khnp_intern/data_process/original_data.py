@@ -20,7 +20,6 @@ class OriginalData:
 
     def convert_satellite(self, date_file: str):
         base_file_name = " ".join(date_file.split()[:2])  # 'date 2025-01-10' 부분만 추출
-    
 
         file_path = f"{satellite_path}daily/size900/{base_file_name} size900 data.parquet"
         if os.path.exists(file_path):
