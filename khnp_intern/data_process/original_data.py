@@ -19,8 +19,7 @@ class OriginalData:
   
     def convert_satellite(self, date_file: str):
         all_date_data = {}
-        for key, path in satellite_path.items():
-            full_path = (f"{path}daily/{date_file}")
-            data = pd.read_parquet(full_path)
-            all_date_data[key] = data
+        full_path = (f"{satellite_path}daily/{date_file}")
+        data = pd.read_parquet(full_path)
+        all_date_data = data
         return all_date_data 
