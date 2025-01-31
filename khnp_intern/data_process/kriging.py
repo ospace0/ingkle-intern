@@ -371,9 +371,7 @@ class EstimateKriging:
                 raise Exception("Nan value in df.")
             all_krig.append(hour_krig_data.copy())
         all_krig_df = pd.concat(all_krig, ignore_index=True)
-        all_krig_df.sort_values(by=["genHour", "lat", "lon"], inplace=True)
-        if all_krig_df.isnull().values.any():
-            raise Exception("Nan value in df.")
+        all_krig_df = all_krig_df.set_index(["genHour", "lat", "lon"])
         return all_krig_df
 
     def _date_weather_krig(self, weather_dt: pd.DataFrame, krig_columns: list):
@@ -405,18 +403,49 @@ class EstimateKriging:
                     raise Exception("Nan value in df.")
             all_krig.append(hour_krig_data)
         all_krig_df = pd.concat(all_krig, ignore_index=True)
-        all_krig_df.sort_values(by=["genHour", "lat", "lon"], inplace=True)
-        if all_krig_df.isnull().values.any():
-            raise Exception("Nan value in df.")
-        return all_krig_df
+        all_krig_df = all_krig_df.set_index(["genHour", "lat", "lon"])
+        return all_krig_df[krig_columns]
+    
+    def _date_satellite_weight(self, satellite_dt: pd.DataFrame, krig_columns: list):
+        krig_data_cols = ['genHour', 'lat', 'lon'] + krig_columns
+        extract_range = 0.1
+        all_krig = []
+        for loc_id in self.pred_coords.index:
+            lon, lat = self.pred_coords.loc[loc_id]
+            range_satellite_data = satellite_dt[
+                (satellite_dt['lat'] >= lat - extract_range) & (satellite_dt['lat'] <= lat + extract_range) &
+                (satellite_dt['lon'] >= lon - extract_range) & (satellite_dt['lon'] <= lon + extract_range)]
+            range_satellite_data = range_satellite_data.sort_values(["lat", "lon"])
+            first_hour_data = range_satellite_data[range_satellite_data["hour"]==0]
+            distances = np.sqrt((first_hour_data['lat'] - lat) ** 2 + (first_hour_data['lon'] - lon) ** 2)
+            weights = 1 / distances
+            normalized_weights = np.array(weights / weights.sum())
+
+            hour_krig_data = pd.DataFrame(columns=krig_data_cols, index=range(1, 24))
+            hour_krig_data.loc[:, ['lat', 'lon']] = [lat, lon]
+            hour_krig_data.loc[:, "genHour"] = range(1, 24)
+            hour_krig_data = hour_krig_data.set_index("genHour")
+            for h in range(1, 24):
+                hour_satellite_data = range_satellite_data[range_satellite_data["hour"]==h]
+                for w_col in krig_columns:
+                    wa_val = (np.array(hour_satellite_data[w_col]) * normalized_weights).sum()
+                    hour_krig_data.loc[h, w_col] = wa_val
+            hour_krig_data = hour_krig_data.reset_index(drop=False)
+            all_krig.append(hour_krig_data.copy())
+        all_krig_df = pd.concat(all_krig, ignore_index=True)
+        all_krig_df = all_krig_df.set_index(["genHour", "lat", "lon"])
+        return all_krig_df[krig_columns]
 
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
+        satellite_dt = self.original_data.convert_satellite(date_file)
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
+        krig_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "datetime", "lat", "lon"]]
         gen_krig = self._date_gen_krig(gen_dt)
         weather_krig = self._date_weather_krig(weather_dt, krig_weather_columns)
-        combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=True)
+        satellite_wa = self._date_satellite_weight(satellite_dt, krig_satellite_columns)
+        combined_data = pd.concat([gen_krig, weather_krig, satellite_wa], axis=1).reset_index(drop=False)
         if combined_data.isnull().values.any():
             raise Exception("Nan value in df.")
         save_dir = f"{estimation_path}kriging_input/estimation/"
@@ -428,12 +457,12 @@ class EstimateKriging:
     def daily_krig(self):
         save_dir = f"{estimation_path}kriging_input/estimation/"
         for date_file in self.data_files:
-            save_file_name = date_file.split(".")[0]
-            save_file_name = f"{save_file_name}.parquet"
-            if save_file_name in os.listdir(save_dir):
-                continue
-            print(date_file)
-            self._date_krig(date_file)
+            date_file_name = date_file.split(".")[0]
+            save_file_name = f"{date_file_name}.parquet"
+            # if save_file_name in os.listdir(save_dir):
+            #     continue
+            print(date_file_name)
+            self._date_krig(date_file_name)
 
 class RealtimeKriging:
     def __init__(self, datetime_hour: int):
