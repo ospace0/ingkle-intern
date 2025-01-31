@@ -266,9 +266,10 @@ class WholeTrainKriging:
                 raise Exception("Nan value in df.")
             train_krig.append(hour_train_gen.copy())
         train_krig_df = pd.concat(train_krig, ignore_index=True)
-        train_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
-        if train_krig_df.isnull().values.any():
-            raise Exception("Nan value in df.")
+        # train_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
+        # if train_krig_df.isnull().values.any():
+        #     raise Exception("Nan value in df.")
+        train_krig_df = train_krig_df.set_index(["genHour", "kpxGenid"])
         return train_krig_df
 
     def _date_weather_krig(self, weather_dt: pd.DataFrame, gen_dt: pd.DataFrame, krig_columns: list):
@@ -298,21 +299,57 @@ class WholeTrainKriging:
                     raise Exception("Nan value in df.")
             train_krig.append(hour_train_krig)
         train_krig_df = pd.concat(train_krig, ignore_index=True)
-        train_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
-        if train_krig_df.isnull().values.any():
-            raise Exception("Nan value in df.")
-        return train_krig_df
+        # train_krig_df.sort_values(by=["kpxGenid", "genHour"], inplace=True)
+        # if train_krig_df.isnull().values.any():
+        #     raise Exception("Nan value in df.")
+        train_krig_df = train_krig_df.set_index(["genHour", "kpxGenid"])
+        return train_krig_df[krig_columns]
 
+    def _date_satellite_wa(self, satellite_dt: pd.DataFrame, gen_dt: pd.DataFrame, krig_columns: list):
+        gen_ids = gen_dt.drop_duplicates(subset=["kpxGenid"])[["kpxGenid", "lat", "lon"]]
+        krig_data_cols = ["kpxGenid", "genHour", "lat", "lon"] + krig_columns
+        extract_range = 0.1
+        all_krig = []
+        for _, loc_id in gen_ids.iterrows():
+            lon, lat = loc_id["lon"], loc_id["lat"] 
+            range_satellite_data = satellite_dt[
+                (satellite_dt['lat'] >= lat - extract_range) & (satellite_dt['lat'] <= lat + extract_range) &
+                (satellite_dt['lon'] >= lon - extract_range) & (satellite_dt['lon'] <= lon + extract_range)]
+            range_satellite_data = range_satellite_data.sort_values(["lat", "lon"])
+            first_hour_data = range_satellite_data[range_satellite_data["hour"]==0]
+            distances = np.sqrt((first_hour_data['lat'] - lat) ** 2 + (first_hour_data['lon'] - lon) ** 2)
+            weights = 1 / distances
+            normalized_weights = np.array(weights / weights.sum())
+
+            hour_krig_data = pd.DataFrame(columns=krig_data_cols, index=range(1, 24))
+            hour_krig_data.loc[:, ['lat', 'lon', 'kpxGenid']] = [lat, lon, loc_id["kpxGenid"]]
+            hour_krig_data.loc[:, "genHour"] = range(1, 24)
+            hour_krig_data = hour_krig_data.set_index("genHour")
+            for h in range(1, 24):
+                hour_satellite_data = range_satellite_data[range_satellite_data["hour"]==h]
+                for w_col in krig_columns:
+                    wa_val = (np.array(hour_satellite_data[w_col]) * normalized_weights).sum()
+                    hour_krig_data.loc[h, w_col] = wa_val
+            hour_krig_data = hour_krig_data.reset_index(drop=False)
+            all_krig.append(hour_krig_data.copy())
+        all_krig_df = pd.concat(all_krig, ignore_index=True)
+        all_krig_df =all_krig_df.astype({"lat": "float64", "lon": "float64"})
+        all_krig_df = all_krig_df.set_index(["genHour", "kpxGenid"])
+        return all_krig_df[krig_columns]
+    
     def _date_krig(self, date_file: str):
         gen_dt = self.original_data.convert_generator(date_file)
         weather_dt = self.original_data.convert_weather(date_file)
+        satellite_dt = self.original_data.convert_satellite(date_file)
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
+        krig_satellite_columns = [c for c in satellite_dt.columns if c not in ["hour", "datetime", "lat", "lon"]]   
         gen_krig = self._date_gen_krig(gen_dt)
         weather_krig = self._date_weather_krig(weather_dt, gen_dt, krig_weather_columns)
-        combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=False)
+        satellite_wa = self._date_satellite_wa(satellite_dt, gen_dt, krig_satellite_columns)
+        combined_data = pd.concat([gen_krig, weather_krig, satellite_wa], axis=1).reset_index(drop=False)
         if combined_data.isnull().values.any():
             raise Exception("Nan value in df.")
-        save_dir = f"{estimation_path}kriging_input/train/"
+        save_dir = f"{estimation_path}kriging_input/train/" 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         save_file_name = date_file.split(".")[0]
@@ -321,12 +358,12 @@ class WholeTrainKriging:
     def daily_krig(self):
         save_dir = f"{estimation_path}kriging_input/train/"
         for date_file in self.data_files:
-            save_file_name = date_file.split(".")[0]
-            save_file_name = f"{save_file_name}.parquet"
+            date_file_name = date_file.split(".")[0]
+            save_file_name = f"{date_file_name}.parquet"
             if save_file_name in os.listdir(save_dir):
                 continue
-            print(date_file)
-            self._date_krig(date_file)
+            print(date_file_name)
+            self._date_krig(date_file_name)
 
 class EstimateKriging:
     def __init__(self):
