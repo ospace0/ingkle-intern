@@ -1,10 +1,6 @@
-weather_path = "sample data/weather/"
-generator_path = "sample data/generator/"
-kriging_path = "sample data/kriging/"
-estimation_path = "sample data/estimation/"
-estimate_result_path = "sample data/estimation/results/"   
-satellite_path ={
-    "900": "sample data/satelite/900/",
-    "1800": "sample data/satelite/1800/",
-    "3600": "sample data/satelite/3600/"
-}
+weather_path = "D:/khnp_solar_power/sample data/weather/"
+generator_path = "D:/khnp_solar_power/sample data/generator/"
+kriging_path = "D:/khnp_solar_power/kriging/"
+estimation_path = "D:/khnp_solar_power/estimation/"
+estimate_result_path = "D:/khnp_solar_power/estimation/results/"   
+satellite_path ="D:/khnp_solar_power/sample data/size900/"
