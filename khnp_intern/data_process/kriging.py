@@ -199,14 +199,8 @@ class TrainTestKriging:
                                                                    krig_weather_columns)
             train_satellite, valid_satellite = self._date_satellite_krig(satellite_dt, gen_dt, set_valid_gens, set_train_gens, 
                                                                    results_col)
-          
-            set_train_krig_df = pd.concat([train_gen, train_weather, train_satellite], ignore_index = False, axis=1)
-            set_valid_krig_df = pd.concat([valid_gen, valid_weather, valid_satellite], ignore_index = False, axis=1)
-            set_valid_krig_df = set_valid_krig_df.reset_index()
-            set_train_krig_df = set_train_krig_df.reset_index()
-
-            set_valid_krig_df.sort_values(by=["kpxGenid", "genHour", "lat", "lon"], inplace=True)
-            set_train_krig_df.sort_values(by=["kpxGenid", "genHour", "lat", "lon"], inplace=True)
+            set_train_krig_df = pd.concat([train_gen, train_weather, train_satellite], axis=1).reset_index(drop=False)
+            set_valid_krig_df = pd.concat([valid_gen, valid_weather, valid_satellite], axis=1).reset_index(drop=False)
 
             if set_train_krig_df.isnull().values.any():
                 raise Exception("Nan value in df.")
@@ -315,7 +309,7 @@ class WholeTrainKriging:
         krig_weather_columns = [c for c in weather_dt.columns if c not in ["time", "lat", "lon"]]
         gen_krig = self._date_gen_krig(gen_dt)
         weather_krig = self._date_weather_krig(weather_dt, gen_dt, krig_weather_columns)
-        combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=True)
+        combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=False)
         if combined_data.isnull().values.any():
             raise Exception("Nan value in df.")
         save_dir = f"{estimation_path}kriging_input/train/"
