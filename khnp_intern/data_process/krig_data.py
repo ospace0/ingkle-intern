@@ -12,6 +12,8 @@ class DataStatistics:
         self.std = std[var_cols]
         statsitic_df = pd.concat([self.mean, self.std], axis=1)
         statsitic_df.columns = ["mean", "std"]
+        if not os.path.exists("trained_models/"):
+            os.makedirs("trained_models/")
         statsitic_df.to_csv("trained_models/statistics.csv")
         return var_cols
     
