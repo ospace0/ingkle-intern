@@ -16,10 +16,10 @@ if __name__ == "__main__":
     satellite_cols = ["genHour", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", 
                    "IR105", "IR112", "IR123", "IR133"]
     
-    # cols_list = [all_cols, weather_cols, satellite_cols]
+    cols_list = [all_cols, weather_cols, satellite_cols]
 
-    test_cols = ["genHour", "eff_krig", "RN"]
-    cols_list = [test_cols]
+    # test_cols = ["genHour", "eff_krig", "RN"]
+    # cols_list = [test_cols]
 
     for cols in cols_list: 
         krig_data = KrigTrainTestData(cols)
