@@ -182,8 +182,12 @@ class TrainTestKriging:
             set_train_krig_df = pd.concat([train_gen, train_weather, train_satellite], axis=1).reset_index(drop=False)
             set_valid_krig_df = pd.concat([valid_gen, valid_weather, valid_satellite], axis=1).reset_index(drop=False)
             if set_train_krig_df.isnull().values.any():
+                print(set_train_krig_df.isnull().sum())
+                print(set_train_krig_df[set_train_krig_df.isnull().any(axis=1)])
                 raise Exception("Nan value in df.")
             if set_valid_krig_df.isnull().values.any():
+                print(set_valid_krig_df.isnull().sum())
+                print(set_valid_krig_df[set_valid_krig_df.isnull().any(axis=1)])
                 raise Exception("Nan value in df.")
             save_dir = f"{kriging_path}{set_id}/"
             if not os.path.exists(save_dir):
@@ -533,4 +537,3 @@ class RealtimeKriging:
         weather_krig = self._weather_krig(weather_dt, krig_weather_columns)
         combined_data = pd.concat([gen_krig, weather_krig[krig_weather_columns]], axis=1).reset_index(drop=True)
         return combined_data
-
