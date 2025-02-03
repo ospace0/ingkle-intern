@@ -157,13 +157,13 @@ class TrainTestKriging:
                 hour_krig_data = hour_krig_data.reset_index(drop=False)
                 all_krig.append(hour_krig_data.copy())
             all_krig_df = pd.concat(all_krig, ignore_index=True)
-            all_krig_df =all_krig_df.astype({"lat": "float64", "lon": "float64"})
+            all_krig_df = all_krig_df.astype({"lat": "float64", "lon": "float64"})
             all_krig_df = all_krig_df.set_index(["kpxGenid", "genHour", "lat", "lon"])
             return all_krig_df[krig_columns]
         valid_krig_df = _wa_valid_or_train(satellite_dt, valid_gen_dt, krig_satellite_columns)
         train_krig_df = _wa_valid_or_train(satellite_dt, train_gen_dt, krig_satellite_columns)
         return train_krig_df, valid_krig_df
-
+ 
 
     def _date_krig(self, date_str: str):
         gen_dt = self.original_data.convert_generator(f"{date_str}")
