@@ -3,9 +3,6 @@ import numpy as np
 import pandas as pd
 from data_process.data_path import estimation_path, kriging_path
 
-_input_cols = ["genHour", "eff_krig", "TA", "RN", "WS", "WD", "HM", "PV", "TD", 
-               "PA", "PS", "SS", "SI", "SD_TOT", "SD_HR3", "CA_TOT", "CA_MID", 
-               "VS", "TS"]
 
 class DataStatistics:
     def _compute_statistics(self, train_data: pd.DataFrame):
@@ -30,8 +27,8 @@ class DataStatistics:
         return normalized_arr
 
 class KrigTrainTestData(DataStatistics):
-    def __init__(self):
-        self.input_cols = _input_cols
+    def __init__(self, input_cols: list):
+        self.input_cols = input_cols
         self.label_col = ["efficiency"]
         self.all_sets = sorted(os.listdir(kriging_path))
 
@@ -60,7 +57,7 @@ class KrigTrainTestData(DataStatistics):
     
 class KrigPredData(DataStatistics):
     def __init__(self):
-        self.input_cols = _input_cols
+        # self.input_cols = _input_cols
         self.label_col = ["efficiency"]
         self.estimate_dir = f"{estimation_path}kriging_input/estimation/"
         self.estimate_files = sorted(os.listdir(self.estimate_dir))
@@ -88,7 +85,7 @@ class KrigPredData(DataStatistics):
 
 class KrigRealtimeData(DataStatistics):
     def __init__(self):
-        self.input_cols = _input_cols
+        # self.input_cols = _input_cols
         self.label_col = ["efficiency"]
 
     def normalize_data(self, estimate_df: pd.DataFrame):
