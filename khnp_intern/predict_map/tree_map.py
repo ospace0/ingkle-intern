@@ -19,12 +19,12 @@ def _plot_efficiency(dataset: pd.DataFrame, file_name: str,
 if __name__ == "__main__":
     model_name = "GBR"
     data_dir = f"{estimate_result_path}{model_name}/"
-    date_files = sorted([f for f in os.listdir(data_dir) if f.split(".")[-1]=="npz"])
+    date_files = sorted([f for f in os.listdir(data_dir) if f.split(".")[-1]=="parquet"])
     all_date_data, day_date_data = [], []
     for date_f in date_files:
         date_df = pd.read_parquet(f"{data_dir}{date_f}")
         plot_data = date_df[["genHour", "lon", "lat", "efficiency"]].copy()
-        plot_data["date"] = datetime.strptime(date_f, "date %Y-%m-%d data.npz")
+        plot_data["date"] = datetime.strptime(date_f, "date %Y-%m-%d data.parquet")
         all_date_data.append(plot_data.copy())
         day_date_data.append(plot_data[(plot_data["genHour"]>=10) & (plot_data["genHour"]<=16)].copy())
     all_date_data = pd.concat(all_date_data)

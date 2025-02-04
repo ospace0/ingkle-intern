@@ -58,8 +58,8 @@ class KrigTrainTestData(DataStatistics):
         return all_train_input, all_train_label, all_valid_input, all_valid_label, all_valid_df
     
 class KrigPredData(DataStatistics):
-    def __init__(self):
-        # self.input_cols = _input_cols
+    def __init__(self, input_cols: list):
+        self.input_cols = input_cols
         self.label_col = ["efficiency"]
         self.estimate_dir = f"{estimation_path}kriging_input/estimation/"
         self.estimate_files = sorted(os.listdir(self.estimate_dir))
