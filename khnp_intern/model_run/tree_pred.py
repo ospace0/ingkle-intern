@@ -9,7 +9,14 @@ if __name__ == "__main__":
                "PA", "PS", "SS", "SI", "SD_TOT", "SD_HR3", "CA_TOT", "CA_MID", 
                "VS", "TS", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", 
                "IR105", "IR112", "IR123", "IR133"]
+    
+    top_cols = ["eff_krig", "SI", "genHour",  "SS", "CA_TOT", "WS", "PV", "HM", "TS", "CA_MID", "IR133", "SW038"]
 
+    wo_st_cols = ["genHour", "eff_krig", "TA", "RN", "WS", "WD", "HM", "PV", "TD",
+                    "PA", "PS", "SS", "SI", "SD_TOT", "SD_HR3", "CA_TOT", "CA_MID",
+                    "VS", "TS"]
+    
+    t_cols = ["genHour", "eff_krig"]
     
     krig_data = KrigPredData(cols)
     model_name = "GBR"

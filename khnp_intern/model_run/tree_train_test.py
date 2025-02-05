@@ -13,10 +13,16 @@ if __name__ == "__main__":
                    "PA", "PS", "SS", "SI", "SD_TOT", "SD_HR3", "CA_TOT", "CA_MID", 
                    "VS", "TS"]
 
-    satellite_cols = ["genHour", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", 
+    satellite_cols = ["genHour", "eff_krig", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", 
                    "IR105", "IR112", "IR123", "IR133"]
     
-    cols_list = [all_cols, weather_cols, satellite_cols]
+    top12_cols = ["genHour", "eff_krig", "TA", "RN", "WS", "WD", "HM", "PV", "TD",
+                    "PA", "PS", "SS", "SI", "SD_TOT", "SD_HR3", "CA_TOT", "CA_MID",
+                    "VS", "TS"]
+    
+    t_cols = ["genHour", "eff_krig"]
+    
+    cols_list = [top12_cols, t_cols] 
 
     for cols in cols_list: 
         krig_data = KrigTrainTestData(cols)
@@ -35,35 +41,5 @@ if __name__ == "__main__":
             set_day_acc[set_name] = r2_score(day_label, day_pred)
         print(set_acc)
         print(set_day_acc)
-        print(round(np.mean(list(set_acc.values())), 3))
-        print(round(np.mean(list(set_day_acc.values())), 3))
-        
-
-# if __name__ == "__main__":
-#     all_cols = ["TA", "RN", "WS", "WD", "HM", "PV", "TD", 
-#             "PA", "PS", "SS", "SI", "SD_TOT", "SD_HR3", "CA_TOT", "CA_MID", 
-#             "VS", "TS", "SW038", "WV063", "WV069", "WV073", "IR087", "IR096", 
-#             "IR105", "IR112", "IR123", "IR133"]
-#     fixed_cols = ["genHour", "eff_krig"]
-  
-#     for cols in all_cols: 
-#         print(cols)
-#         cols =  fixed_cols + [cols]
-#         krig_data = KrigTrainTestData(cols)
-#         model_name = "GBR"
-
-#         set_acc, set_day_acc = {}, {}
-#         for set_name in krig_data.all_sets:
-#             print(set_name)
-#             train_input, train_label, valid_input, valid_label, valid_df = krig_data.read_set_data(set_name)
-#             model_train_test = TrainTestTree(model_name)
-#             model_train_test.train(train_input, train_label)
-#             valid_pred = model_train_test.predict(valid_input)
-#             day_label = valid_label[(valid_df["genHour"]>=10) & (valid_df["genHour"]<=16)]
-#             day_pred = valid_pred[(valid_df["genHour"]>=10) & (valid_df["genHour"]<=16)]
-#             set_acc[set_name] = r2_score(valid_label, valid_pred)
-#             set_day_acc[set_name] = r2_score(day_label, day_pred)
-#         print(set_acc)
-#         print(set_day_acc)
-#         print(round(np.mean(list(set_acc.values())), 3))
-#         print(round(np.mean(list(set_day_acc.values())), 3))
+        # print(round(np.mean(list(set_acc.values())), 3))
+        print(round(np.mean(list(set_day_acc.values())), 4))
